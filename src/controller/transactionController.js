@@ -1,5 +1,6 @@
 import Transaction from "../models/transaction.js";
 import Budget from "../models/budget.js";
+import { parse } from 'json2csv';
 
 export const registerTransaction = async (req, res) => {
     try {
@@ -182,6 +183,124 @@ export const getSingleTransaction = async (req, res) => {
     return res.status(500).json({
       status: "error",
       message: "Server error",
+    });
+  }
+};
+
+
+
+
+
+
+export const generateReport = async (req, res) => {
+  const { userId } = req.params;
+  const { start, end } = req.query;
+
+  try {
+    if (!start || !end) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide both start and end dates.',
+      });
+    }
+
+    const matchStage = {
+      userId: userId,
+      date: { $gte: new Date(start), $lte: new Date(end) },
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m', date: '$date' } }, // Group by month
+          totalIncome: {
+            $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] },
+          },
+          totalExpense: {
+            $sum: { $cond: [{ $eq: ['$type', 'expense'] }, '$amount', 0] },
+          },
+          transactionCount: { $sum: 1 },  
+        },
+      },
+      { $sort: { '_id': 1 } },
+    ];
+
+    const report = await Transaction.aggregate(pipeline);
+    console.log('Aggregation Report:', report);
+    const formattedReport = report.map(row => ({
+      month: row._id,
+      totalIncome: row.totalIncome,
+      totalExpense: row.totalExpense,
+      transactionCount: row.transactionCount
+    }));
+
+    res.status(200).json({
+      message: 'Monthly report generated successfully',
+      timeRange: { start, end },
+      data: formattedReport,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to generate monthly report for bar chart',
+    });
+  }
+};
+
+
+
+export const generateMonthlyReportForCSV = async (req, res) => {
+  const { userId } = req.params;
+  const { start, end } = req.query;
+
+  try {
+    if (!start || !end) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide both start and end dates.',
+      });
+    }
+
+    const matchStage = {
+      userId: userId,
+      date: { $gte: new Date(start), $lte: new Date(end) },
+    };
+
+    const pipeline = [
+      { $match: matchStage },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
+          totalIncome: {
+            $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] },
+          },
+          totalExpense: {
+            $sum: { $cond: [{ $eq: ['$type', 'expense'] }, '$amount', 0] },
+          },
+          transactionCount: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id': 1 } },
+    ];
+
+    const report = await Transaction.aggregate(pipeline);
+    const formattedReport = report.map(row => ({
+      month: row._id,
+      totalIncome: row.totalIncome,
+      totalExpense: row.totalExpense,
+      transactionCount: row.transactionCount,
+    }));
+    const csv = parse(formattedReport);
+    res.header('Content-Type', 'text/csv');
+    res.header('Content-Disposition', 'attachment; filename="monthly_report.csv"');
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to generate or download the report',
     });
   }
 };

@@ -16,12 +16,12 @@ const transactionSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['income', 'expense'],
+    enum: ['Income', 'Expense'],
     required: true,
   },
   account: {
     type: String,
-    enum: ['bank', 'mobile money', 'cash'],
+    enum: ['Bank', 'Mobile money', 'Cash'],
     required: true,
   },
   category: {
@@ -47,7 +47,7 @@ const transactionSchema = new Schema({
   budgetId: {  
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Budget',
-    // required: true,
+   
   },
 });
 

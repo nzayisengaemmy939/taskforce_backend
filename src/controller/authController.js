@@ -39,7 +39,7 @@ export const userLogin = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Account does not exist" });
     }
-    const isValidPassword = await bcryptjs.compare(password,user.password,);
+    const isValidPassword = await bcryptjs.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(400).json({ message: "Incorrect password" });
     }
@@ -50,7 +50,7 @@ export const userLogin = async (req, res) => {
     );
     return res
       .status(200)
-      .json({ message: "User Logged in successfully", token,user });
+      .json({ message: "User Logged in successfully", token, user });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
@@ -148,17 +148,18 @@ export const updatePassword = async (req, res) => {
 
 export const resetEmail = async (req, res) => {
   try {
+    console.log("JWT Secret:", process.env.JWT_SECRET);
     const { email } = req.body;
     const findUser = await User.findOne({ email });
     if (!findUser) {
       return res.status(400).json({ message: "User not found" });
     }
-    
+    console.log("during signing:", process.env.JWT_SECRET);
     const token = jwt.sign({ userId: findUser._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    console.log("Token during signing:", token); 
-    
+    console.log("Token during signing:", token);
+
     findUser.resetToken = token;
     findUser.resetTokenExpiration = Date.now() + 3600000;
     await findUser.save();
@@ -214,13 +215,21 @@ export const resetEmail = async (req, res) => {
   }
 };
 export const resetPassword = async (req, res) => {
-  const  token  = req.params.token;
+  const { token } = req.params;
   const { password } = req.body;
 
   try {
-    console.log("Token during verify:", token); 
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
+
     const user = await User.findOne({
       _id: decodedToken.userId,
       resetToken: token,
@@ -228,19 +237,28 @@ export const resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      console.log("Invalid or expired token");
-      return res.status(400).send("Invalid or expired token");
+      console.log("No user found with token");
+      return res.status(400).json({ message: "Invalid or expired token" });
     }
 
     const hashedPassword = await bcryptjs.hash(password, 10);
+
     user.password = hashedPassword;
     user.resetToken = undefined;
     user.resetTokenExpiration = undefined;
+
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful" });
+    return res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
-    console.log("Error verifying token:", error.message);
-    return res.status(400).send({ message: "Invalid or expired token" });
+    if (error.name === "TokenExpiredError") {
+      return res.status(400).json({ message: "Token has expired" });
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+
+    return res.status(500).json({ message: "Error resetting password" });
   }
 };
