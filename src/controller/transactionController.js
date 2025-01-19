@@ -40,7 +40,7 @@ export const registerTransaction = async (req, res) => {
       budgetId: budgetId || null,
     });
 
-    if (type === "expense" && budgetId) {
+    if (type === "Expense" && budgetId) {
       const budget = await Budget.findById(budgetId);
       if (budget) {
         const categoryInBudget = budget.categories.find(
