@@ -20,7 +20,7 @@ const budgetSchema = new mongoose.Schema(
     },
     category:{
       type: String,
-      // required: true,
+    
     },
     amount: {
       type: Number,

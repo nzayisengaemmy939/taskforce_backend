@@ -179,23 +179,33 @@ export const resetEmail = async (req, res) => {
       to: findUser.email,
       from: process.env.EMAIL_USERNAME,
       subject: "Password Reset",
-      html: `<div style="width: 90%; height: fitcontent;border: 2px solid #021742;border-radius: 20px;">
-    <div style="width: 60%; max-width: 600px; margin: auto;border-bottom: 1px solid;">
-
-    </div>
-    <div style="width: 80%; max-width: 600px; margin: auto; text-align: left; font-family: Arial, sans-serif;">
-      <p style="font-size: 16px;">Dear ${email},</p>
-      <p style="font-size: 16px;">We received a request to reset your password. To proceed, please click the link below:<br><br><a href="${
+      html: `<div style="width: 90%; max-width: 600px; margin: auto; border: 2px solid #007BFF; border-radius: 20px; overflow: hidden; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+  <div style="width: 100%; background-color: #007BFF; padding: 15px; text-align: center;">
+    <h2 style="color: #ffffff; margin: 0;">Password Reset Request</h2>
+  </div>
+  <div style="padding: 20px; color: #333333;">
+    <p style="font-size: 16px; color: #007BFF;">Dear ${email},</p>
+    <p style="font-size: 16px; line-height: 1.5;">
+      We received a request to reset your password. To proceed, please click the link below:<br><br>
+      <a href="${
         process.env.FRONT_END_URL
-      }/reset-password?token=${token}">Reset Your Password</a>.</p>
-      <p>For security reasons, this link will expire in [${new Date(
+      }/reset?token=${token}" style="color: #007BFF; text-decoration: none; font-weight: bold;">Reset Your Password</a>.
+    </p>
+    <p style="font-size: 14px; line-height: 1.5; color: #555555;">
+      For security reasons, this link will expire on 
+      <strong style="color: #007BFF;">${new Date(
         findUser.resetTokenExpiration
-      ).toISOString()}]. If you did not request a password reset, please ignore this email or contact our support team. </p>
-
-      <p>Thank you,</p>
-
-    </div>
-  </div> `,
+      ).toLocaleString()}</strong>. If you did not request a password reset, please ignore this email or contact our support team.
+    </p>
+    <p style="font-size: 14px; color: #555555;">Thank you,</p>
+    <p style="font-size: 14px; color: #007BFF; font-weight: bold;">The Support Team</p>
+  </div>
+  <div style="background-color: #e0e0e0; padding: 10px; text-align: center;">
+    <p style="font-size: 12px; color: #555555; margin: 0;">
+      © ${new Date().getFullYear()} NZAYISENGA EMMANUEL. All rights reserved.
+    </p>
+  </div>
+</div> `,
     };
 
     transporter.sendMail(mailOptions, (err, info) => {

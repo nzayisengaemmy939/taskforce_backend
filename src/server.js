@@ -4,11 +4,13 @@ import connectDb from "./database/connectDb.js";
 import { userRoute } from "./router/authRoute.js";
 import transactionRouter from "./router/transactionRouter.js";
 import budgetRouter from "./router/budgetRouter.js";
+import cors from 'cors'
 
 dotenv.config();
 const app = express();
 
 await connectDb();
+app.use(cors()); 
 app.use(express.json());
 
   app.use('/api',userRoute)

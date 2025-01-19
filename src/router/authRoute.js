@@ -13,6 +13,6 @@ userRoute.post('/auth/login',userLogin)
 userRoute.get('/auth/get/profile/:id', getUser);
 userRoute.put("/auth/update/profile/:id", updateProfile);
 userRoute.put("/auth/update/password/:id", updatePassword);
-userRoute.post("/auth/send/email/:id", resetEmail);
+userRoute.post("/auth/send/email", resetEmail);
 userRoute.post("/auth/reset/password/:token",resetPassword);
 
