@@ -280,12 +280,23 @@ export const generateExpenseReport = async (req, res) => {
         $sort: { totalExpense: -1 },
       },
       {
+        $lookup: {
+          from: "transactions", 
+          pipeline: [
+            { $match: matchStage },
+            { $group: { _id: null, total: { $sum: "$amount" } } },
+          ],
+          as: "totalSum",
+        },
+      },
+      { $unwind: "$totalSum" },
+      {
         $project: {
           category: "$_id",
           totalExpense: 1,
           avgPercentage: {
             $multiply: [
-              { $divide: ["$totalExpense", { $sum: "$totalExpense" }] },
+              { $divide: ["$totalExpense", "$totalSum.total"] },
               100,
             ],
           },
@@ -306,6 +317,7 @@ export const generateExpenseReport = async (req, res) => {
     });
   }
 };
+
 
 
 export const generateMonthlyReportForCSV = async (req, res) => {

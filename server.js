@@ -1,9 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
-import connectDb from "./database/connectDb.js";
-import { userRoute } from "./router/authRoute.js";
-import transactionRouter from "./router/transactionRouter.js";
-import budgetRouter from "./router/budgetRouter.js";
+import connectDb from "./src/database/connectDb.js";
+import { userRoute } from "./src/router/authRoute.js";
+import transactionRouter from "./src/router/transactionRouter.js";
+import budgetRouter from "./src/router/budgetRouter.js";
 import cors from 'cors'
 
 dotenv.config();
