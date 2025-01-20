@@ -146,80 +146,110 @@ export const updatePassword = async (req, res) => {
   }
 };
 
+const createPasswordResetEmail = (email, token, expirationDate) => {
+  return `
+    <div style="width: 90%; max-width: 600px; margin: auto; border: 2px solid #007BFF; border-radius: 20px; overflow: hidden; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+      <div style="width: 100%; background-color: #007BFF; padding: 15px; text-align: center;">
+        <h2 style="color: #ffffff; margin: 0;">Password Reset Request</h2>
+      </div>
+      <div style="padding: 20px; color: #333333;">
+        <p style="font-size: 16px; color: #007BFF;">Dear ${email}</p>
+        <p style="font-size: 16px; line-height: 1.5;">
+          We received a request to reset your password. To proceed, please click the button below:<br><br>
+          <a href="${process.env.FRONT_END_URL}/reset?token=${token}" 
+             style="background-color: #007BFF; 
+                    color: #ffffff; 
+                    padding: 10px 20px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    display: inline-block;">
+            Reset Your Password
+          </a>
+        </p>
+        <p style="font-size: 14px; line-height: 1.5; color: #555555;">
+          For security reasons, this link will expire on 
+          <strong style="color: #007BFF;">${new Date(
+            expirationDate
+          ).toLocaleString()}</strong>. 
+          If you did not request a password reset, please ignore this email or contact our support team.
+        </p>
+        <p style="font-size: 14px; color: #555555;">Thank you,</p>
+        <p style="font-size: 14px; color: #007BFF; font-weight: bold;">The Support Team</p>
+      </div>
+      <div style="background-color: #e0e0e0; padding: 10px; text-align: center;">
+        <p style="font-size: 12px; color: #555555; margin: 0;">
+          © ${new Date().getFullYear()} NZAYISENGA EMMANUEL. All rights reserved.
+        </p>
+      </div>
+    </div>
+  `;
+};
+
+const sendEmail = async (to, subject, html) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  const mailOptions = {
+    to,
+    from: process.env.EMAIL_USERNAME,
+    subject,
+    html,
+  };
+
+  return await transporter.sendMail(mailOptions);
+};
+
+
 export const resetEmail = async (req, res) => {
   try {
-    console.log("JWT Secret:", process.env.JWT_SECRET);
     const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Email is required",
+      });
+    }
+
     const findUser = await User.findOne({ email });
     if (!findUser) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(404).json({
+        status: "fail",
+        message: "User not found",
+      });
     }
-    console.log("during signing:", process.env.JWT_SECRET);
+
     const token = jwt.sign({ userId: findUser._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    console.log("Token during signing:", token);
 
+    const expirationDate = Date.now() + 3600000; 
     findUser.resetToken = token;
-    findUser.resetTokenExpiration = Date.now() + 3600000;
+    findUser.resetTokenExpiration = expirationDate;
     await findUser.save();
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
+    const emailHtml = createPasswordResetEmail(email, token, expirationDate);
 
-    const mailOptions = {
-      to: findUser.email,
-      from: process.env.EMAIL_USERNAME,
-      subject: "Password Reset",
-      html: `<div style="width: 90%; max-width: 600px; margin: auto; border: 2px solid #007BFF; border-radius: 20px; overflow: hidden; font-family: Arial, sans-serif; background-color: #f9f9f9;">
-  <div style="width: 100%; background-color: #007BFF; padding: 15px; text-align: center;">
-    <h2 style="color: #ffffff; margin: 0;">Password Reset Request</h2>
-  </div>
-  <div style="padding: 20px; color: #333333;">
-    <p style="font-size: 16px; color: #007BFF;">Dear ${email},</p>
-    <p style="font-size: 16px; line-height: 1.5;">
-      We received a request to reset your password. To proceed, please click the link below:<br><br>
-      <a href="https://taskforcefrontend.vercel.app/reset?token=${token}" style="color: #007BFF; text-decoration: none; font-weight: bold;">Reset Your Password</a>.
-    </p>
-    <p style="font-size: 14px; line-height: 1.5; color: #555555;">
-      For security reasons, this link will expire on 
-      <strong style="color: #007BFF;">${new Date(
-        findUser.resetTokenExpiration
-      ).toLocaleString()}</strong>. If you did not request a password reset, please ignore this email or contact our support team.
-    </p>
-    <p style="font-size: 14px; color: #555555;">Thank you,</p>
-    <p style="font-size: 14px; color: #007BFF; font-weight: bold;">The Support Team</p>
-  </div>
-  <div style="background-color: #e0e0e0; padding: 10px; text-align: center;">
-    <p style="font-size: 12px; color: #555555; margin: 0;">
-      © ${new Date().getFullYear()} NZAYISENGA EMMANUEL. All rights reserved.
-    </p>
-  </div>
-</div> `,
-    };
+    await sendEmail(findUser.email, "Password Reset", emailHtml);
 
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err)
-        return res.status(500).json({
-          status: "fail",
-          message: err.error,
-        });
-    });
     res.status(200).json({
       status: "success",
-      token,
-      message: "Reset email sent",
+      message: "Reset email sent successfully",
     });
   } catch (error) {
-    return res.status(500).json({ status: "error", message: error.message });
+    console.error("Password reset error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to process password reset request",
+    });
   }
 };
 export const resetPassword = async (req, res) => {
