@@ -187,9 +187,7 @@ export const resetEmail = async (req, res) => {
     <p style="font-size: 16px; color: #007BFF;">Dear ${email},</p>
     <p style="font-size: 16px; line-height: 1.5;">
       We received a request to reset your password. To proceed, please click the link below:<br><br>
-      <a href="${
-        process.env.FRONT_END_URL
-      }/reset?token=${token}" style="color: #007BFF; text-decoration: none; font-weight: bold;">Reset Your Password</a>.
+      <a href="https://taskforcefrontend.vercel.app/reset?token=${token}" style="color: #007BFF; text-decoration: none; font-weight: bold;">Reset Your Password</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.5; color: #555555;">
       For security reasons, this link will expire on 
